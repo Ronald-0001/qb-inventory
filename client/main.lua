@@ -85,34 +85,37 @@ local trunkSize = {
 ---@param amount? number The amount of the item to check for, this will only have effect when items is a string or an array of strings
 ---@return boolean success Returns true if the player has the item
 local function HasItem(items, amount)
-    local isTable = type(items) == 'table'
-    local isArray = isTable and table.type(items) == 'array' or false
-    local totalItems = #items
-    local count = 0
-    local kvIndex = 2
-	if isTable and not isArray then
-        totalItems = 0
-        for _ in pairs(items) do totalItems += 1 end
-        kvIndex = 1
+    amount = amount or 1
+    local isString = type(items) == "string"
+    local isTable = type(items) == "table"
+    local isArray = isTable and table.type(items) == "array" or false
+
+    local checklist = {}
+
+    if isString then
+      checklist[items] = amount
+    elseif isArray then
+      for i, t_item in ipairs(items) do
+        checklist[t_item] = amount
+      end
+    elseif isTable then
+      for t_item, t_amount in pairs(items) do
+        checklist[t_item] = t_amount
+      end
     end
-    for _, itemData in pairs(PlayerData.items) do
-        if isTable then
-            for k, v in pairs(items) do
-                local itemKV = {k, v}
-                if itemData and itemData.name == itemKV[kvIndex] and ((amount and itemData.amount >= amount) or (not isArray and itemData.amount >= v) or (not amount and isArray)) then
-                    count += 1
-                end
-            end
-            if count == totalItems then
-                return true
-            end
-        else -- Single item as string
-            if itemData and itemData.name == items and (not amount or (itemData and amount and itemData.amount >= amount)) then
-                return true
-            end
-        end
+
+    for _, item in pairs(PlayerData.items) do
+      if checklist[item.name] then
+        checklist[item.name] = checklist[item.name] - item.amount
+        if checklist[item.name] <= 0 then checklist[item.name] = nil end
+      end
     end
-    return false
+
+    for t_item, t_amount in pairs(checklist) do
+      return false
+    end
+
+    return true
 end
 
 exports("HasItem", HasItem)
